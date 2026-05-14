@@ -14,6 +14,8 @@ from gymnasium import logger, spaces
 from gymnasium.envs.classic_control import utils
 from gymnasium.error import DependencyNotInstalled
 
+from pid import PID
+
 
 class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
     """
@@ -102,7 +104,7 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         # defaults:
         # self.theta_threshold_radians = 12 * 2 * math.pi / 360
         # self.x_threshold = 2.4
-        self.theta_threshold_radians = 12 * 2 * math.pi / 360
+        self.theta_threshold_radians = 90 * 2 * math.pi / 360
         self.x_threshold = 2.4
 
         # Angle limit set to 2 * theta_threshold_radians so failing observation
@@ -316,6 +318,37 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             self.isopen = False
 
 
+def run_pid(episodes: int, max_steps: int, render_mode: Optional[str], seed: Optional[int]) -> None:
+    env = CartPoleEnv(render_mode=render_mode)
+    pid = PID(kp=10.0, ki=1.0, kd=1.0, dt=env.tau)
+    for ep in range(episodes):
+        ep_seed = None if seed is None else seed + ep
+        obs, _ = env.reset(seed=ep_seed)
+        pid.reset()
+        total_reward = 0.0
+
+        for step_idx in range(max_steps):
+            # | Num | Observation           | Min                 | Max               |
+            # |-----|-----------------------|---------------------|-------------------|
+            # | 0   | Cart Position         | -4.8                | 4.8               |
+            # | 1   | Cart Velocity         | -Inf                | Inf               |
+            # | 2   | Pole Angle            | ~ -0.418 rad (-24°) | ~ 0.418 rad (24°) |
+            # | 3   | Pole Angular Velocity | -Inf                | Inf               |
+            x, x_dot, theta, theta_dot = obs
+            err = theta + x * 0.2
+            u = pid.update(err)
+            action = 1 if u > 0 else 0
+            print('uuuuuu', u, 'action', action)
+            obs, reward, terminated, truncated, _ = env.step(action)
+            total_reward += reward
+            if terminated or truncated:
+                break
+            
+
+        print(f"Episode {ep + 1}/{episodes}: steps={step_idx + 1}, reward={total_reward:.1f}")
+
+    env.close()
+
 def run_demo(episodes: int, max_steps: int, render_mode: Optional[str], seed: Optional[int]) -> None:
     env = CartPoleEnv(render_mode=render_mode)
     for ep in range(episodes):
@@ -341,8 +374,8 @@ def run_demo(episodes: int, max_steps: int, render_mode: Optional[str], seed: Op
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run a quick CartPole demo rollout.")
-    parser.add_argument("--episodes", type=int, default=10, help="Number of episodes to run.")
-    parser.add_argument("--max-steps", type=int, default=500, help="Max steps per episode.")
+    parser.add_argument("--episodes", type=int, default=5, help="Number of episodes to run.")
+    parser.add_argument("--max-steps", type=int, default=1500, help="Max steps per episode.")
     parser.add_argument(
         "--render-mode",
         choices=["human", "rgb_array"],
@@ -353,6 +386,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     run_demo(
+        episodes=args.episodes,
+        max_steps=args.max_steps,
+        render_mode=args.render_mode,
+        seed=args.seed,
+    )
+
+    run_pid(
         episodes=args.episodes,
         max_steps=args.max_steps,
         render_mode=args.render_mode,
