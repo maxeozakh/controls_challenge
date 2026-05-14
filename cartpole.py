@@ -102,7 +102,7 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         # defaults:
         # self.theta_threshold_radians = 12 * 2 * math.pi / 360
         # self.x_threshold = 2.4
-        self.theta_threshold_radians = 90 * 2 * math.pi / 360
+        self.theta_threshold_radians = 12 * 2 * math.pi / 360
         self.x_threshold = 2.4
 
         # Angle limit set to 2 * theta_threshold_radians so failing observation
@@ -110,9 +110,9 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         high = np.array(
             [
                 self.x_threshold * 2,
-                np.finfo(np.float32).max,
+                np.finfo(np.float32).max, # pylint: disable=no-member
                 self.theta_threshold_radians * 2,
-                np.finfo(np.float32).max,
+                np.finfo(np.float32).max, # pylint: disable=no-member
             ],
             dtype=np.float32,
         )
@@ -228,7 +228,7 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             )
 
         if self.screen is None:
-            pygame.init()
+            pygame.init() # pylint: disable=no-member
             if self.render_mode == "human":
                 pygame.display.init()
                 self.screen = pygame.display.set_mode(
@@ -312,7 +312,7 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             import pygame
 
             pygame.display.quit()
-            pygame.quit()
+            pygame.quit() # pylint: disable=no-member
             self.isopen = False
 
 
@@ -330,9 +330,9 @@ def run_demo(episodes: int, max_steps: int, render_mode: Optional[str], seed: Op
             obs, reward, terminated, truncated, _ = env.step(action)
             total_reward += reward
             if terminated or truncated:
-                obs, _ = env.reset(seed=None)  # or keep deterministic seed logic
-                continue
-                # break
+                # obs, _ = env.reset(seed=None)  # or keep deterministic seed logic
+                # continue
+                break
 
         print(f"Episode {ep + 1}/{episodes}: steps={step_idx + 1}, reward={total_reward:.1f}")
 
@@ -341,7 +341,7 @@ def run_demo(episodes: int, max_steps: int, render_mode: Optional[str], seed: Op
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run a quick CartPole demo rollout.")
-    parser.add_argument("--episodes", type=int, default=3, help="Number of episodes to run.")
+    parser.add_argument("--episodes", type=int, default=10, help="Number of episodes to run.")
     parser.add_argument("--max-steps", type=int, default=500, help="Max steps per episode.")
     parser.add_argument(
         "--render-mode",
