@@ -119,7 +119,7 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             dtype=np.float32,
         )
 
-        self.action_space = spaces.Box(low=-1, high=1, shape=(1,))
+        self.action_space = spaces.Discrete(2)
         self.observation_space = spaces.Box(-high, high, dtype=np.float32)
 
         self.render_mode = render_mode
@@ -138,7 +138,7 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         assert self.action_space.contains(action), err_msg
         assert self.state is not None, "Call reset before using step method."
         x, x_dot, theta, theta_dot = self.state
-        force = float(action[0]) * self.force_mag
+        force = self.force_mag if action == 1 else -self.force_mag
         costheta = math.cos(theta)
         sintheta = math.sin(theta)
 
@@ -320,14 +320,12 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
 def run_pid(episodes: int, max_steps: int, render_mode: Optional[str], seed: Optional[int]) -> None:
     env = CartPoleEnv(render_mode=render_mode)
-    pid = PID(kp=10.0, ki=20.0, kd=1.0, dt=env.tau)
-    print_per = 100
+    pid = PID(kp=10.0, ki=1.0, kd=1.0, dt=env.tau)
     for ep in range(episodes):
         ep_seed = None if seed is None else seed + ep
         obs, _ = env.reset(seed=ep_seed)
         pid.reset()
         total_reward = 0.0
-        errs = 0.0
 
         for step_idx in range(max_steps):
             # | Num | Observation           | Min                 | Max               |
@@ -338,12 +336,9 @@ def run_pid(episodes: int, max_steps: int, render_mode: Optional[str], seed: Opt
             # | 3   | Pole Angular Velocity | -Inf                | Inf               |
             x, x_dot, theta, theta_dot = obs
             err = theta + x * 0.2
-            errs += err        
-            if step_idx % print_per == 0 and step_idx > 0:
-                print(errs/print_per)
-                errs = 0
             u = pid.update(err)
-            action = np.array([np.clip(u, -1.0, 1.0)], dtype=np.float32)
+            action = 1 if u > 0 else 0
+            print('uuuuuu', u, 'action', action)
             obs, reward, terminated, truncated, _ = env.step(action)
             total_reward += reward
             if terminated or truncated:
@@ -390,6 +385,12 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=0, help="Base random seed.")
     args = parser.parse_args()
 
+    run_demo(
+        episodes=args.episodes,
+        max_steps=args.max_steps,
+        render_mode=args.render_mode,
+        seed=args.seed,
+    )
 
     run_pid(
         episodes=args.episodes,
