@@ -1,0 +1,2 @@
+- we aim to learn from first principles and win
+- we want to place top of the leaderboard, but only by ownership of understanding

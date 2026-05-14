@@ -1,5 +1,4 @@
 from . import BaseController
-import numpy as np
 
 class Controller(BaseController):
   """
