@@ -8,11 +8,10 @@ action_dim = 2
 weights_scale = 0.1
 W1 = (torch.randn(state_dim, hidden_dim) * weights_scale).requires_grad_(True)
 W2 = (torch.randn(hidden_dim, action_dim) * weights_scale).requires_grad_(True)
-params = [W1, W2]
 
 env = CartPoleEnv()
 n_episodes = 10000
-episode_rewards = []
+total_rewards = []
 recent_rewards = []
 log_every = 10
 lr = 0.2
@@ -54,18 +53,18 @@ for episode in range(n_episodes):
    loss.backward()
 
    with torch.no_grad():
-      for p in params:
+      for p in [W1, W2]:
          p -= lr * p.grad
          p.grad.zero_()
 
-   total_reward = sum(rewards)
-   episode_rewards.append(total_reward)
-   recent_rewards.append(total_reward)
+   episode_reward = sum(rewards)
+   total_rewards.append(episode_reward)
+   recent_rewards.append(episode_reward)
    if len(recent_rewards) > 50:
       recent_rewards.pop(0)
    if (episode + 1) % log_every == 0:
       avg = sum(recent_rewards) / len(recent_rewards)
-      print(f"episode {episode + 1:4d} | reward={total_reward:6.1f} | "
+      print(f"episode {episode + 1:4d} | reward={episode_reward:6.1f} | "
             f"avg(last 50)={avg:6.1f} | loss={loss.item():+.4f}")
 
 env.close()
