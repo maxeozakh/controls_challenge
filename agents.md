@@ -1,2 +1,3 @@
 - we aim to learn from first principles and win
-- we want to place top of the leaderboard, but only by ownership of understanding
+- we want to place high of the leaderboard, but only by ownership of understanding
+- we don't want to exploit setup of the problem and place on top by that
