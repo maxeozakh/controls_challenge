@@ -7,7 +7,7 @@ DEL_T = 0.1
 
 class Controller(BaseController):
   """
-  A simple PID controller
+  A simple MPC controller
   """
   def __init__(self,):
     self.p = 0.195
@@ -68,14 +68,6 @@ class Controller(BaseController):
       
 
   def update(self, target_lataccel, current_lataccel, state, future_plan):
-    f_lataccel, f_roll_lataccel, f_v_ego, f_a_ego = future_plan
-
     steer = self.find_decent_steer(target_lataccel, current_lataccel, state, future_plan)
     
     return steer
-
-    # error = (target_lataccel - current_lataccel)
-    # self.error_integral += error
-    # error_diff = error - self.prev_error
-    # self.prev_error = error
-    # return self.p * error + self.i * self.error_integral + self.d * error_diff
