@@ -1,21 +1,26 @@
-import numpy as np
 import torch
+import numpy as np
+import torch.nn as nn
 import gymnasium as gym
-env = gym.make("CartPole-v1")
 
 state_dim = 4
 hidden_dim = 16
 action_dim = 2
-weights_scale = 0.1
-W1 = (torch.randn(state_dim, hidden_dim) * weights_scale).requires_grad_(True)
-W2 = (torch.randn(hidden_dim, action_dim) * weights_scale).requires_grad_(True)
-
 n_episodes = 10000
 total_rewards = []
 recent_rewards = []
 log_every = 10
-lr = 0.2
+lr = 1e-2
 
+layers = [
+   nn.Linear(state_dim, hidden_dim),
+   nn.ReLU(),
+   nn.Linear(hidden_dim, action_dim)
+]
+model = nn.Sequential(*layers)
+optimizer = torch.optim.Adam(model.parameters(), lr)
+
+env = gym.make("CartPole-v1")
 for episode in range(n_episodes):
    n_episode_steps = 500
    log_probs = []
@@ -23,9 +28,7 @@ for episode in range(n_episodes):
    obs, _ = env.reset()
    for step in range(n_episode_steps):
       state = torch.from_numpy(obs).float()
-      h = state @ W1
-      hidden = torch.relu(h)
-      logits = hidden @ W2
+      logits = model(state)
       probs = torch.softmax(logits, dim=0)
 
       # TODO: cringe, how to do it simpier? why in this way?
@@ -51,11 +54,8 @@ for episode in range(n_episodes):
    log_probs_t = torch.stack(log_probs)
    loss = -(returns * log_probs_t).mean()
    loss.backward()
-
-   with torch.no_grad():
-      for p in [W1, W2]:
-         p -= lr * p.grad
-         p.grad.zero_()
+   optimizer.step()
+   optimizer.zero_grad()
 
    episode_reward = sum(rewards)
    total_rewards.append(episode_reward)
