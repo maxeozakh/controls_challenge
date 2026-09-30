@@ -1,6 +1,7 @@
 import numpy as np
 import torch
-from cartpole import CartPoleEnv
+import gymnasium as gym
+env = gym.make("CartPole-v1")
 
 state_dim = 4
 hidden_dim = 16
@@ -9,7 +10,6 @@ weights_scale = 0.1
 W1 = (torch.randn(state_dim, hidden_dim) * weights_scale).requires_grad_(True)
 W2 = (torch.randn(hidden_dim, action_dim) * weights_scale).requires_grad_(True)
 
-env = CartPoleEnv()
 n_episodes = 10000
 total_rewards = []
 recent_rewards = []
