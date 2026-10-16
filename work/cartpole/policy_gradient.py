@@ -23,9 +23,9 @@ critic_optimizer = torch.optim.Adam(critic_model.parameters(), lr)
 env = gym.make("CartPole-v1")
 for episode in range(n_episodes):
    n_episode_steps = 500
-   log_probs = []
-   rewards = []
-   states = []
+   log_probs, rewards, states = [], [], []
+   term_last_state_estim = None
+
    obs, _ = env.reset()
    # ===== ROLLOUT ===== #
    for step in range(n_episode_steps):
@@ -40,6 +40,11 @@ for episode in range(n_episodes):
       log_probs.append(log_prob)
       obs, reward, terminated, truncated, _ = env.step(action)
       rewards.append(reward)
+      
+      if truncated and not terminated:
+         last_obs = torch.from_numpy(obs).float()
+         term_last_state_estim = critic_model(last_obs)
+         term_last_state_estim = term_last_state_estim.detach()
       if terminated or truncated:
          break
    # ================= #
@@ -49,7 +54,7 @@ for episode in range(n_episodes):
 
 
    returns = []
-   R = 0.0
+   R = term_last_state_estim.item() if truncated and not terminated else 0
    gamma = 0.99
    for r in reversed(rewards):
       R = r + gamma * R
@@ -88,7 +93,7 @@ for episode in range(n_episodes):
       recent_rewards.pop(0)
    if (episode + 1) % log_every == 0:
       avg = sum(recent_rewards) / len(recent_rewards)
-      print(f"episode {episode + 1:4d} | reward={episode_reward:6.1f} | "
+      print(f"{episode + 1:4d} | reward={episode_reward:6.1f} | "
             f"avg(last 50)={avg:6.1f} | loss={loss.item():+.4f} | value_loss={value_loss.item():.4f}")
 
 env.close()
