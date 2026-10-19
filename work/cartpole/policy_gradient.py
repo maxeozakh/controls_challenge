@@ -41,43 +41,57 @@ for episode in range(n_episodes):
       obs, reward, terminated, truncated, _ = env.step(action)
       rewards.append(reward)
       
+
       if truncated and not terminated:
          last_obs = torch.from_numpy(obs).float()
          term_last_state_estim = critic_model(last_obs)
-         term_last_state_estim = term_last_state_estim.detach()
+         term_last_state_estim = term_last_state_estim.detach().item()
+      else:
+         term_last_state_estim = 0
       if terminated or truncated:
          break
    # ================= #
    states = torch.stack(states)
+   # V's
    critic_out = critic_model(states)
    critic_out = critic_out.squeeze(-1)
 
 
-   returns = []
-   R = term_last_state_estim.item() if truncated and not terminated else 0
+   advantages = []
    gamma = 0.99
-   for r in reversed(rewards):
-      R = r + gamma * R
-      returns.append(R)
-   returns.reverse()
+   # 0.95 is ~ "listen mostly to the next 10-20 steps"
+   lam = 0.95
+   critic_out_detached = critic_out.detach()
+   A = 0
+   for t in reversed(range(len(rewards))):
+      V_t = critic_out_detached[t]
+      
+      if t == len(rewards) - 1:
+         V_next = term_last_state_estim
+      else:
+         V_next = critic_out_detached[t+1]
+     
+      surprise = rewards[t] + gamma * V_next - V_t
+      A = surprise + gamma * lam * A
+      advantages.append(A)
 
-   returns = torch.tensor(returns, dtype=torch.float32)
+   advantages.reverse()
+   advantages = torch.stack(advantages)
+   value_targets = advantages + critic_out_detached
 
    # regard to naming, it is a standard RL term:
    # value -- how much return you expect from state S if you just follow policy
    # action value -- -||- if you take a specific action in state S first, then follow policy
    # *advantage* -- action value minus value, so advantage of specific action
-   advantage = returns - critic_out.detach()
    # TODO: understand it numerically
-   advantage = (advantage - advantage.mean()) / (advantage.std() + 0.001)
-   # returns = (returns - returns.mean()) / (returns.std() + 0.001)
+   advantages_norm = (advantages - advantages.mean()) / (advantages.std() + 0.001)
 
    log_probs = torch.stack(log_probs)
 
-   loss = -(advantage * log_probs).mean()
+   loss = -(advantages_norm * log_probs).mean()
    loss.backward()
 
-   value_loss = ((critic_out - returns)**2).mean()
+   value_loss = ((critic_out - value_targets)**2).mean()
    value_loss.backward()
 
    policy_optimizer.step()
